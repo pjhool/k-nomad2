@@ -4,14 +4,11 @@ export interface City {
   region: string;
   heroImage: string;
   thumbnail: string;
-  ratings: {
-    overall: number;
-    workEnvironment: number;
-    livingCost: number;
-    internetQuality: number;
-    cafeInfra: number;
-    community: number;
-  };
+  likes: number;
+  dislikes: number;
+  budget: 'low' | 'medium' | 'high';
+  environment: string[];
+  bestSeason: string[];
   quickInfo: {
     monthlyBudget: string;
     recommendedStay: string;
@@ -28,10 +25,7 @@ export interface Review {
   userId: string;
   userName: string;
   userAvatar: string;
-  rating: number;
-  pros: string[];
-  cons: string[];
-  comment: string;
+  content: string;
   stayDuration: string;
   createdAt: string;
   helpful: number;

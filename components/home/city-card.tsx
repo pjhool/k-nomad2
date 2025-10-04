@@ -1,40 +1,40 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Star, Wifi, Coffee, Users, DollarSign } from 'lucide-react';
+import { ThumbsUp, MapPin } from 'lucide-react';
 import { City } from '@/types';
 
 interface CityCardProps {
   city: City;
 }
 
+const getBudgetLabel = (budget: string) => {
+  switch (budget) {
+    case 'low':
+      return '저렴';
+    case 'medium':
+      return '보통';
+    case 'high':
+      return '높음';
+    default:
+      return budget;
+  }
+};
+
+const getBudgetColor = (budget: string) => {
+  switch (budget) {
+    case 'low':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'medium':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'high':
+      return 'bg-red-100 text-red-800 border-red-200';
+    default:
+      return '';
+  }
+};
+
 export function CityCard({ city }: CityCardProps) {
-  // 생활비 레벨을 원화 기호로 표시
-  const getCostLevel = (cost: number) => {
-    const maxLevel = 5;
-    const filledLevel = Math.round(maxLevel - cost); // 역으로 계산 (낮을수록 좋음)
-    return '₩'.repeat(Math.max(1, Math.min(maxLevel, filledLevel)));
-  };
-
-  // 평점을 점으로 표시
-  const getRatingDots = (rating: number) => {
-    const maxDots = 5;
-    const filledDots = Math.round(rating);
-    return (
-      <div className="flex space-x-1">
-        {Array.from({ length: maxDots }, (_, i) => (
-          <div
-            key={i}
-            className={`w-1.5 h-1.5 rounded-full ${
-              i < filledDots ? 'bg-primary' : 'bg-muted'
-            }`}
-          />
-        ))}
-      </div>
-    );
-  };
-
   return (
     <Link href={`/cities/${city.cityId}`}>
       <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full">
@@ -47,7 +47,7 @@ export function CityCard({ city }: CityCardProps) {
             </div>
           </div>
           {/* Popular Badge */}
-          {city.totalReviews > 1000 && (
+          {city.likes > 1000 && (
             <Badge className="absolute top-2 right-2" variant="secondary">
               인기
             </Badge>
@@ -56,47 +56,44 @@ export function CityCard({ city }: CityCardProps) {
 
         {/* City Info */}
         <div className="p-4 space-y-3">
-          {/* Overall Rating */}
+          {/* Likes and Budget */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1">
-              <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-              <span className="font-semibold">{city.ratings.overall}</span>
+            <div className="flex items-center space-x-2">
+              <ThumbsUp className="h-4 w-4 text-primary" />
+              <span className="font-semibold">{city.likes}</span>
               <span className="text-sm text-muted-foreground">
-                ({city.totalReviews})
+                ({city.totalReviews} 리뷰)
               </span>
             </div>
-            <span className="text-sm font-medium text-muted-foreground">
-              {getCostLevel(city.ratings.livingCost)}
-            </span>
+            <Badge variant="outline" className={`text-xs ${getBudgetColor(city.budget)}`}>
+              {getBudgetLabel(city.budget)}
+            </Badge>
           </div>
 
-          {/* Key Metrics */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="flex flex-col items-center space-y-1">
-              <Wifi className="h-4 w-4 text-muted-foreground" />
-              {getRatingDots(city.ratings.internetQuality)}
-            </div>
-            <div className="flex flex-col items-center space-y-1">
-              <Coffee className="h-4 w-4 text-muted-foreground" />
-              {getRatingDots(city.ratings.cafeInfra)}
-            </div>
-            <div className="flex flex-col items-center space-y-1">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              {getRatingDots(city.ratings.community)}
-            </div>
+          {/* Environment Tags */}
+          <div className="flex flex-wrap gap-1">
+            {city.environment.slice(0, 2).map((env) => (
+              <Badge key={env} variant="outline" className="text-xs">
+                {env}
+              </Badge>
+            ))}
           </div>
 
           {/* Tags */}
           <div className="flex flex-wrap gap-1">
             {city.quickInfo.tags.slice(0, 3).map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs">
+              <Badge key={tag} variant="secondary" className="text-xs">
                 {tag}
               </Badge>
             ))}
           </div>
 
           {/* Quick Info */}
-          <div className="pt-2 border-t">
+          <div className="pt-2 border-t space-y-1">
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              {city.region}
+            </p>
             <p className="text-xs text-muted-foreground">
               추천 체류: {city.quickInfo.recommendedStay}
             </p>

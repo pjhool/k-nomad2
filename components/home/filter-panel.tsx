@@ -5,14 +5,21 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Filter, X } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { filterOptions } from '@/lib/dummy-data';
 
-interface FilterPanelProps {
-  onFilterChange?: (filters: any) => void;
+interface FilterValues {
+  budget: string;
+  duration: string;
+  interests: string[];
+  infrastructure: string[];
 }
 
-export function FilterPanel({ onFilterChange }: FilterPanelProps) {
+interface FilterPanelProps {
+  onFilterChange?: (filters: FilterValues) => void;
+}
+
+export function FilterPanel({ }: FilterPanelProps) {
   const [selectedBudget, setSelectedBudget] = useState<string>('');
   const [selectedDuration, setSelectedDuration] = useState<string>('');
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);

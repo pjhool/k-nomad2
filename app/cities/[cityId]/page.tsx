@@ -2,21 +2,20 @@ import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Star,
-  Wifi,
-  Coffee,
-  Users,
   DollarSign,
   MapPin,
   Calendar,
-  Heart,
   Share2,
-  ChevronLeft
+  ChevronLeft,
+  Leaf,
+  Building2
 } from 'lucide-react';
 import Link from 'next/link';
 import { cities, reviews } from '@/lib/dummy-data';
+import { LikeDislikeSection } from '@/components/cities/like-dislike-section';
+import { ReviewSection } from '@/components/cities/review-section';
+import { createClient } from '@/utils/supabase/server';
 
 interface PageProps {
   params: {
@@ -24,7 +23,33 @@ interface PageProps {
   };
 }
 
-export default function CityDetailPage({ params }: PageProps) {
+const getBudgetLabel = (budget: string) => {
+  switch (budget) {
+    case 'low':
+      return '저렴';
+    case 'medium':
+      return '보통';
+    case 'high':
+      return '높음';
+    default:
+      return budget;
+  }
+};
+
+const getBudgetColor = (budget: string) => {
+  switch (budget) {
+    case 'low':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'medium':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'high':
+      return 'bg-red-100 text-red-800 border-red-200';
+    default:
+      return '';
+  }
+};
+
+export default async function CityDetailPage({ params }: PageProps) {
   const city = cities.find(c => c.cityId === params.cityId);
 
   if (!city) {
@@ -33,20 +58,14 @@ export default function CityDetailPage({ params }: PageProps) {
 
   const cityReviews = reviews.filter(r => r.cityId === city.cityId);
 
-  const getRatingBar = (rating: number) => {
-    const percentage = (rating / 5) * 100;
-    return (
-      <div className="flex items-center space-x-3">
-        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-          <div
-            className="h-full bg-primary transition-all"
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-        <span className="text-sm font-medium w-8">{rating}</span>
-      </div>
-    );
-  };
+  // Get current user from Supabase
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const isAuthenticated = !!user;
+  const userId = user?.id;
+  const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || '익명';
+  const userAvatar = user?.user_metadata?.avatar_url || '/avatars/default.jpg';
 
   return (
     <div className="min-h-screen">
@@ -83,9 +102,6 @@ export default function CityDetailPage({ params }: PageProps) {
         {/* Action Buttons */}
         <div className="absolute top-4 right-4 flex gap-2">
           <Button size="icon" variant="secondary" className="bg-white/20 backdrop-blur border-0">
-            <Heart className="h-5 w-5" />
-          </Button>
-          <Button size="icon" variant="secondary" className="bg-white/20 backdrop-blur border-0">
             <Share2 className="h-5 w-5" />
           </Button>
         </div>
@@ -96,13 +112,28 @@ export default function CityDetailPage({ params }: PageProps) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Main Info */}
           <div className="lg:col-span-2 space-y-8">
+            {/* Like/Dislike Section */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">이 도시가 마음에 드시나요?</h3>
+              <LikeDislikeSection
+                cityId={city.cityId}
+                initialLikes={city.likes}
+                initialDislikes={city.dislikes}
+                userId={userId}
+                isAuthenticated={isAuthenticated}
+              />
+            </Card>
+
             {/* Quick Info Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <DollarSign className="h-5 w-5 text-muted-foreground" />
-                  <Badge variant="outline">예산</Badge>
+                  <Badge variant="outline" className={getBudgetColor(city.budget)}>
+                    {getBudgetLabel(city.budget)}
+                  </Badge>
                 </div>
+                <p className="text-xs text-muted-foreground mb-1">예산</p>
                 <p className="text-sm font-semibold">{city.quickInfo.monthlyBudget}</p>
               </Card>
               <Card className="p-4">
@@ -110,6 +141,7 @@ export default function CityDetailPage({ params }: PageProps) {
                   <Calendar className="h-5 w-5 text-muted-foreground" />
                   <Badge variant="outline">추천기간</Badge>
                 </div>
+                <p className="text-xs text-muted-foreground mb-1">체류 기간</p>
                 <p className="text-sm font-semibold">{city.quickInfo.recommendedStay}</p>
               </Card>
               <Card className="p-4">
@@ -117,204 +149,91 @@ export default function CityDetailPage({ params }: PageProps) {
                   <MapPin className="h-5 w-5 text-muted-foreground" />
                   <Badge variant="outline">지역</Badge>
                 </div>
+                <p className="text-xs text-muted-foreground mb-1">위치</p>
                 <p className="text-sm font-semibold">{city.region}</p>
               </Card>
             </div>
 
-            {/* Detailed Ratings */}
+            {/* Environment & Season Info */}
             <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4">상세 평가</h2>
+              <h3 className="font-semibold mb-4">환경 및 계절</h3>
               <div className="space-y-4">
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <Star className="h-4 w-4" /> 종합 평점
-                    </span>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">작업 환경</span>
                   </div>
-                  {getRatingBar(city.ratings.overall)}
+                  <div className="flex flex-wrap gap-2">
+                    {city.environment.map((env) => (
+                      <Badge key={env} variant="secondary">
+                        {env}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <Wifi className="h-4 w-4" /> 인터넷 품질
-                    </span>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Leaf className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">최적 계절</span>
                   </div>
-                  {getRatingBar(city.ratings.internetQuality)}
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <Coffee className="h-4 w-4" /> 카페 인프라
-                    </span>
+                  <div className="flex flex-wrap gap-2">
+                    {city.bestSeason.map((season) => (
+                      <Badge key={season} variant="outline">
+                        {season}
+                      </Badge>
+                    ))}
                   </div>
-                  {getRatingBar(city.ratings.cafeInfra)}
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <Users className="h-4 w-4" /> 커뮤니티
-                    </span>
-                  </div>
-                  {getRatingBar(city.ratings.community)}
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" /> 생활비
-                    </span>
-                  </div>
-                  {getRatingBar(city.ratings.livingCost)}
                 </div>
               </div>
             </Card>
 
-            {/* Tabs Section */}
-            <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="overview">개요</TabsTrigger>
-                <TabsTrigger value="reviews">리뷰</TabsTrigger>
-                <TabsTrigger value="guide">가이드</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview" className="mt-6 space-y-6">
-                <Card className="p-6">
-                  <h3 className="font-semibold mb-4">이런 분들께 추천해요</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {city.quickInfo.tags.map(tag => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </Card>
-
-                <Card className="p-6">
-                  <h3 className="font-semibold mb-4">주요 특징</h3>
-                  <ul className="space-y-2">
-                    <li className="flex items-start">
-                      <span className="text-primary mr-2">•</span>
-                      <span className="text-sm">빠른 인터넷과 수많은 카페로 작업 환경이 훌륭합니다</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-primary mr-2">•</span>
-                      <span className="text-sm">다양한 코워킹 스페이스와 네트워킹 기회가 있습니다</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-primary mr-2">•</span>
-                      <span className="text-sm">24시간 편의시설과 배달 문화가 발달했습니다</span>
-                    </li>
-                  </ul>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="reviews" className="mt-6 space-y-4">
-                {cityReviews.map(review => (
-                  <Card key={review.id} className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                          {review.userName[0]}
-                        </div>
-                        <div>
-                          <p className="font-medium">{review.userName}</p>
-                          <p className="text-sm text-muted-foreground">체류 {review.stayDuration}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                        <span className="font-medium">{review.rating}</span>
-                      </div>
-                    </div>
-
-                    <p className="text-sm mb-4">{review.comment}</p>
-
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <div className="flex flex-wrap gap-1">
-                        {review.pros.map((pro, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs text-green-600 border-green-600">
-                            {pro}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {review.cons.map((con, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs text-red-600 border-red-600">
-                            {con}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>{review.createdAt}</span>
-                      <Button variant="ghost" size="sm">
-                        👍 도움이 됐어요 ({review.helpful})
-                      </Button>
-                    </div>
-                  </Card>
+            {/* Tags */}
+            <Card className="p-6">
+              <h3 className="font-semibold mb-4">이런 분들께 추천해요</h3>
+              <div className="flex flex-wrap gap-2">
+                {city.quickInfo.tags.map(tag => (
+                  <Badge key={tag} variant="secondary">
+                    {tag}
+                  </Badge>
                 ))}
+              </div>
+            </Card>
 
-                <div className="text-center pt-4">
-                  <Button variant="outline">더 많은 리뷰 보기</Button>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="guide" className="mt-6 space-y-6">
-                <Card className="p-6">
-                  <h3 className="font-semibold mb-4">추천 지역</h3>
-                  <ul className="space-y-2">
-                    <li className="text-sm">• 강남: 스타트업과 코워킹 스페이스가 밀집한 지역</li>
-                    <li className="text-sm">• 성수: 힙한 카페와 창업 생태계가 활발한 지역</li>
-                    <li className="text-sm">• 홍대: 젊은 에너지와 문화가 살아있는 지역</li>
-                  </ul>
-                </Card>
-
-                <Card className="p-6">
-                  <h3 className="font-semibold mb-4">교통 정보</h3>
-                  <ul className="space-y-2">
-                    <li className="text-sm">• 지하철과 버스로 도시 어디든 쉽게 이동 가능</li>
-                    <li className="text-sm">• 공항에서 도심까지 1시간 내외</li>
-                    <li className="text-sm">• 따릉이(공공자전거) 이용 가능</li>
-                  </ul>
-                </Card>
-              </TabsContent>
-            </Tabs>
+            {/* Review Section */}
+            <ReviewSection
+              cityId={city.cityId}
+              reviews={cityReviews}
+              userId={userId}
+              userName={userName}
+              userAvatar={userAvatar}
+              isAuthenticated={isAuthenticated}
+            />
           </div>
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
-            {/* CTA Card */}
-            <Card className="p-6 bg-gradient-to-br from-blue-50 to-purple-50">
-              <h3 className="font-semibold mb-2">이 도시에 관심이 있으신가요?</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                실제 경험자들과 소통하고 더 많은 정보를 얻어보세요
-              </p>
-              <div className="space-y-2">
-                <Button className="w-full">커뮤니티 참여하기</Button>
-                <Button variant="outline" className="w-full">리뷰 작성하기</Button>
-              </div>
-            </Card>
-
             {/* Similar Cities */}
             <Card className="p-6">
               <h3 className="font-semibold mb-4">비슷한 도시</h3>
               <div className="space-y-3">
-                {cities.slice(0, 3).map(similarCity => (
-                  <Link
-                    key={similarCity.cityId}
-                    href={`/cities/${similarCity.cityId}`}
-                    className="flex items-center justify-between hover:bg-muted p-2 rounded-lg transition-colors"
-                  >
-                    <div>
-                      <p className="font-medium">{similarCity.cityName}</p>
-                      <p className="text-xs text-muted-foreground">{similarCity.region}</p>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                      <span className="text-sm">{similarCity.ratings.overall}</span>
-                    </div>
-                  </Link>
-                ))}
+                {cities
+                  .filter(c => c.cityId !== city.cityId && c.region === city.region)
+                  .slice(0, 3)
+                  .map(similarCity => (
+                    <Link
+                      key={similarCity.cityId}
+                      href={`/cities/${similarCity.cityId}`}
+                      className="flex items-center justify-between hover:bg-muted p-2 rounded-lg transition-colors"
+                    >
+                      <div>
+                        <p className="font-medium">{similarCity.cityName}</p>
+                        <p className="text-xs text-muted-foreground">{similarCity.region}</p>
+                      </div>
+                      <div className="flex items-center space-x-1 text-sm">
+                        <span>👍 {similarCity.likes}</span>
+                      </div>
+                    </Link>
+                  ))}
               </div>
             </Card>
 
